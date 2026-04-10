@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>SYSMATE Web Banner Studio</title>
+    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Nanum+Gothic:wght@400;700;800&family=Montserrat:wght@400;700;900&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --sidebar-width: 320px;
+            --accent: #a78bfa;
+            --accent-glow: rgba(167, 139, 250, 0.35);
+            --bg-app: #0e1016;
+            --bg-panel: #161922;
+            --bg-elevated: #1e222d;
+            --bg-input: #252a38;
+            --border: #2f3548;
+            --border-subtle: #252a36;
+            --text: #e8eaf0;
+            --text-muted: #8b93a7;
+            color-scheme: dark;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0; display: flex; flex-direction: column; height: 100vh;
+            font-family: 'Segoe UI', sans-serif;
+            background: var(--bg-app); color: var(--text); overflow: hidden;
+        }
+
+        #app-header {
+            height: 52px; flex-shrink: 0;
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0 14px;
+            background: linear-gradient(90deg, #35c2ff 0%, #6b5cff 55%, #7f3cff 100%);
+            color: #fff;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+            z-index: 20;
+        }
+        .header-left { display: flex; align-items: center; gap: 10px; min-width: 0; }
+        .brand {
+            font-weight: 800; letter-spacing: 0.2px; white-space: nowrap;
+            background: rgba(0,0,0,0.18); padding: 6px 10px; border-radius: 999px;
+        }
+        .doc-title { font-size: 13px; opacity: 0.95; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .header-right { display: flex; align-items: center; gap: 8px; }
+        .header-btn {
+            border: 1px solid rgba(255,255,255,0.25);
+            background: rgba(0,0,0,0.18);
+            color: #fff;
+            padding: 7px 10px;
+            border-radius: 10px;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+        .header-btn:hover { background: rgba(0,0,0,0.26); }
+
+        #app-main { flex: 1; min-height: 0; display: flex; overflow: hidden; }
+
+        #left-rail {
+            width: 56px; flex-shrink: 0;
+            background: #0f121a;
+            border-right: 1px solid var(--border);
+            display: flex; flex-direction: column; align-items: center;
+            padding: 10px 6px;
+            gap: 10px;
+            z-index: 12;
+        }
+        .rail-btn {
+            width: 42px; height: 42px;
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.08);
+            background: rgba(255,255,255,0.04);
+            color: #fff;
+            cursor: pointer;
+            display: grid; place-items: center;
+            font-weight: 900;
+            user-select: none;
+        }
+        .rail-btn.active { border-color: rgba(167, 139, 250, 0.65); box-shadow: 0 0 0 2px rgba(167, 139, 250, 0.18); }
+        .rail-btn:hover { background: rgba(255,255,255,0.07); }
+
+        #sidebar {
+            width: var(--sidebar-width); background: var(--bg-panel);
+            border-right: 1px solid var(--border); display: flex; flex-direction: column; z-index: 10;
+        }
+        .tab-content { padding: 20px; flex: 1; overflow-y: auto; }
+        .tab-content::-webkit-scrollbar { width: 8px; }
+        .tab-content::-webkit-scrollbar-track { background: var(--bg-panel); }
+        .tab-content::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+        h3 { font-size: 16px; margin-bottom: 15px; color: var(--text); font-weight: 600; }
+        .control-item { margin-bottom: 20px; }
+        label { display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 5px; }
+
+        input[type="text"], input[type="number"], select {
+            width: 100%; padding: 8px 10px; border: 1px solid var(--border);
+            border-radius: 6px; background: var(--bg-input); color: var(--text);
+        }
+        input[type="text"]:focus, input[type="number"]:focus, select:focus {
+            outline: none; border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-glow);
+        }
+        input[type="color"] {
+            width: 100%; border: 1px solid var(--border); border-radius: 6px;
+            background: var(--bg-input); cursor: pointer; padding: 2px;
+        }
+        input[type="file"] {
+            width: 100%; font-size: 12px; color: var(--text-muted);
+        }
+        input[type="file"]::file-selector-button {
+            margin-right: 10px; padding: 6px 12px; border-radius: 6px;
+            border: 1px solid var(--border); background: var(--bg-elevated); color: var(--text); cursor: pointer;
+        }
+        input[type="file"]::file-selector-button:hover { background: var(--bg-input); border-color: var(--accent); }
+
+        .bg-upload-row { display: flex; align-items: center; gap: 8px; flex-wrap: nowrap; }
+        .bg-upload-row .bg-file-input { flex: 1; min-width: 0; width: auto; }
+        .btn-bg-remove {
+            flex-shrink: 0; white-space: nowrap; padding: 6px 10px; font-size: 12px; font-weight: 600;
+            border: 1px solid var(--border); border-radius: 6px; background: var(--bg-elevated);
+            color: var(--text-muted); cursor: pointer;
+        }
+        .btn-bg-remove:hover { border-color: #c45c5c; color: #f0a0a0; background: #2c2224; }
+
+        hr { border: none; border-top: 1px solid var(--border-subtle); margin: 18px 0; }
+
+        .canvas-dims { display: flex; align-items: center; gap: 10px; }
+        .canvas-dims .dim-sep { color: var(--text-muted); user-select: none; font-size: 13px; }
+
+        #workspace {
+            flex: 1; display: flex; flex-direction: column;
+            min-height: 0; position: relative; overflow: hidden;
+            background: radial-gradient(ellipse 80% 60% at 50% 40%, #1a1f2e 0%, var(--bg-app) 65%);
+        }
+        #workspace-scroll {
+            flex: 1; min-height: 0; overflow: auto;
+            padding: 24px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            -webkit-overflow-scrolling: touch;
+        }
+        #canvas-scale-wrap {
+            flex-shrink: 0;
+        }
+        #canvas-wrapper {
+            position: relative; background: #fff; box-shadow: 0 20px 60px rgba(0,0,0,0.45), 0 0 0 1px rgba(255,255,255,0.06);
+            background-image: url('assets/banner_1.jpg');
+            background-size: cover; background-position: center; overflow: hidden;
+        }
+
+        .movable {
+            position: absolute; display: flex; align-items: flex-start; gap: 6px;
+            border: 1px solid transparent; user-select: none; cursor: default;
+        }
+        .movable:hover { border: 1px dashed var(--accent); }
+        .movable.selected { border: 1px dashed var(--accent); }
+        .movable-handle {
+            flex-shrink: 0; cursor: move; user-select: none; line-height: 1;
+            font-size: 16px; color: #888; padding: 6px 2px 0 0; opacity: 0.45;
+            letter-spacing: -2px;
+        }
+        .movable:hover .movable-handle { opacity: 0.95; color: #555; }
+        .banner-text {
+            min-width: 100px; outline: none; line-height: 1.2; word-break: keep-all; color: #111;
+            flex: 1; min-height: 1em; cursor: text;
+            user-select: text; -webkit-user-select: text;
+        }
+
+        #zoom-bar {
+            position: absolute; bottom: 20px; left: 20px; z-index: 5;
+            display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px;
+            padding: 10px 14px; border-radius: 8px;
+            background: var(--bg-panel); border: 1px solid var(--border);
+            font-size: 12px; color: var(--text-muted);
+            max-width: calc(100% - 200px);
+        }
+        #zoom-bar label { margin: 0; display: inline; font-size: 12px; }
+        #zoom-range { width: 120px; accent-color: var(--accent); }
+        #zoom-label { min-width: 40px; color: var(--text); font-weight: 600; }
+        .btn-zoom-fit {
+            padding: 6px 10px; font-size: 12px; font-weight: 600;
+            border: 1px solid var(--border); border-radius: 6px; background: var(--bg-elevated);
+            color: var(--text); cursor: pointer;
+        }
+        .btn-zoom-fit:hover { border-color: var(--accent); background: #2a3042; }
+
+        #save-bar {
+            position: absolute; bottom: 20px; right: 20px;
+            display: flex; flex-direction: row; align-items: center; gap: 10px;
+            z-index: 5;
+        }
+        .btn-save {
+            background: linear-gradient(145deg, #9b7ff5, var(--accent)); color: #fff;
+            padding: 12px 24px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer;
+            box-shadow: 0 4px 20px var(--accent-glow);
+        }
+        .btn-save:hover { filter: brightness(1.08); }
+        .btn-save:active { transform: translateY(1px); }
+        .btn-save-secondary {
+            background: var(--bg-elevated); color: var(--text);
+            border: 1px solid var(--border); box-shadow: none;
+        }
+        .btn-save-secondary:hover {
+            filter: none; border-color: var(--accent); background: #2a3042;
+        }
+
+        .template-btn {
+            width: 100%; padding: 10px 12px; margin-bottom: 6px;
+            border: 1px solid var(--border); background: var(--bg-elevated); color: var(--text);
+            cursor: pointer; border-radius: 6px; text-align: left; transition: background 0.15s, border-color 0.15s;
+        }
+        .template-btn:hover { background: #2a3042; border-color: var(--accent); color: #fff; }
+    </style>
+</head>
+<body>
+    <div id="app-header">
+        <div class="header-left">
+            <div class="brand">SYSMATE</div>
+            <div class="doc-title">배너 디자인</div>
+        </div>
+        <div class="header-right">
+            <button type="button" class="header-btn" onclick="fitCanvasToView()">맞춤</button>
+            <button type="button" class="header-btn" onclick="exportCanvasJPG()">다운로드</button>
+        </div>
+    </div>
+
+    <div id="app-main">
+        <div id="left-rail" aria-label="도구">
+            <button type="button" class="rail-btn active" title="디자인">D</button>
+            <button type="button" class="rail-btn" title="요소">E</button>
+            <button type="button" class="rail-btn" title="텍스트">T</button>
+            <button type="button" class="rail-btn" title="업로드">U</button>
+        </div>
+
+        <div id="sidebar">
+            <div class="tab-content">
+            <h3>📏 캔버스 사이즈</h3>
+            <div class="control-item canvas-dims">
+                <input type="number" id="canvas-w" value="1800"><span class="dim-sep">×</span><input type="number" id="canvas-h" value="250">
+            </div>
+
+            <hr>
+
+            <h3>🖼️ 배경 및 이미지</h3>
+            <div class="control-item">
+                <label>배경 색상</label>
+                <input type="color" id="bg-color" value="#ffffff" style="height: 40px; width: 100%;">
+            </div>
+            <div class="control-item">
+                <label>배경 이미지 업로드</label>
+                <div class="bg-upload-row">
+                    <input type="file" id="bg-upload" class="bg-file-input" accept="image/*">
+                    <button type="button" class="btn-bg-remove" id="bg-remove" title="업로드한 배경 이미지 제거">배경삭제</button>
+                </div>
+            </div>
+
+            <div class="control-item">
+                <label>폰트 컬러</label>
+                <input type="color" id="font-color" value="#111111" style="height: 40px; width: 100%;">
+            </div>
+
+            <hr>
+
+            <h3>✍️ 텍스트 추가</h3>
+            <div class="control-item">
+                <button class="template-btn" onclick="addText('제목을 입력하세요', 60, 800)">+ 큰 제목 추가</button>
+                <button class="template-btn" onclick="addText('부제목을 입력하세요', 30, 400)">+ 부제목 추가</button>
+            </div>
+
+            <div class="control-item">
+                <label>폰트 패밀리</label>
+                <select id="font-select">
+                    <option value="'Nanum Gothic'">나눔고딕</option>
+                    <option value="'Black Han Sans'">블랙한산스 (강조)</option>
+                    <option value="'Montserrat'">Montserrat</option>
+                </select>
+            </div>
+
+            <div class="control-item">
+                <label>폰트 사이즈</label>
+                <div class="bg-upload-row">
+                    <input type="range" id="font-size-range" min="8" max="180" value="60" step="1" class="bg-file-input">
+                    <input type="number" id="font-size-num" min="8" max="180" value="60" style="width: 90px;">
+                </div>
+            </div>
+
+            <div class="control-item">
+                <label>폰트 정렬</label>
+                <button type="button" class="template-btn" onclick="centerSelectedMovable()" title="⋮⋮ 손잡이로 박스를 먼저 선택하세요">선택 박스 중앙 정렬</button>
+            </div>
+
+            <hr>
+
+            <h3>🎨 빠른 템플릿</h3>
+            <button type="button" class="template-btn" onclick="applyPreset16x9(1920, 1080)">16:9 배너 (1920×1080)</button>
+            <button type="button" class="template-btn" onclick="applyPreset16x9(1280, 720)">16:9 배너 (1280×720)</button>
+            </div>
+        </div>
+
+        <div id="workspace">
+        <div id="workspace-scroll">
+            <div id="canvas-scale-wrap">
+                <div id="canvas-wrapper">
+                    <div class="movable" style="top: 50%; left: 50%; transform: translate(-50%, -50%);">
+                        <span class="movable-handle" title="드래그하여 이동">⋮⋮</span>
+                        <div class="banner-text" contenteditable="true" style="font-size: 60px; font-weight: 800;">클릭해서 편집</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="zoom-bar" title="큰 캔버스는 스크롤하거나 축소해 보세요">
+            <label for="zoom-range">화면 배율</label>
+            <input type="range" id="zoom-range" min="5" max="100" value="100" step="5">
+            <span id="zoom-label">100%</span>
+            <button type="button" class="btn-zoom-fit" id="zoom-fit">뷰에 맞춤</button>
+        </div>
+
+        <div id="save-bar">
+            <button type="button" class="btn-save" onclick="exportCanvasJPG()">설정캔버스 내보내기</button>
+        </div>
+        </div>
+    </div>
+
+    <script>
+        const wrapper = $('#canvas-wrapper');
+        const canvasScaleWrap = $('#canvas-scale-wrap');
+        let viewZoom = 1;
+
+        function applyViewZoom(z) {
+            viewZoom = Math.max(0.05, Math.min(2, z));
+            canvasScaleWrap.css('zoom', viewZoom);
+            $('#zoom-range').val(Math.round(viewZoom * 100));
+            $('#zoom-label').text(Math.round(viewZoom * 100) + '%');
+        }
+
+        function fitCanvasToView() {
+            const w = parseInt($('#canvas-w').val(), 10) || 1280;
+            const h = parseInt($('#canvas-h').val(), 10) || 720;
+            const el = document.getElementById('workspace-scroll');
+            if (!el) return;
+            const pad = 48;
+            const rw = (el.clientWidth - pad) / w;
+            const rh = (el.clientHeight - pad) / h;
+            const fit = Math.min(rw, rh, 1);
+            applyViewZoom(Math.max(0.05, fit));
+            requestAnimationFrame(scrollStageToCenter);
+        }
+
+        function scrollStageToCenter() {
+            const sc = document.getElementById('workspace-scroll');
+            if (!sc) return;
+            const maxL = Math.max(0, sc.scrollWidth - sc.clientWidth);
+            const maxT = Math.max(0, sc.scrollHeight - sc.clientHeight);
+            sc.scrollLeft = maxL / 2;
+            sc.scrollTop = maxT / 2;
+        }
+
+        $('#zoom-range').on('input', function () {
+            applyViewZoom(parseInt($(this).val(), 10) / 100);
+        });
+        $('#zoom-fit').on('click', fitCanvasToView);
+
+        // 1. 초기 사이즈 및 배경 설정
+        function initCanvas() {
+            wrapper.css({
+                width: $('#canvas-w').val() + 'px',
+                height: $('#canvas-h').val() + 'px',
+                backgroundColor: $('#bg-color').val()
+            });
+            makeMovable();
+            requestAnimationFrame(scrollStageToCenter);
+        }
+
+        // 2. 드래그 가능하게 만들기 (손잡이로만 이동 — 텍스트 영역은 편집/삭제 가능)
+        function makeMovable() {
+            $(".movable").each(function () {
+                const $m = $(this);
+                if ($m.data("ui-draggable")) {
+                    $m.draggable("destroy");
+                }
+            });
+            $(".movable").draggable({
+                containment: "parent",
+                handle: ".movable-handle"
+            });
+        }
+
+        // 텍스트 박스 선택(손잡이 클릭) 후 Delete/Backspace로 전체 삭제 — 편집 중(contenteditable)일 때는 글자만 삭제
+        $(document).on('mousedown', '#canvas-wrapper .movable-handle', function () {
+            $('.movable').removeClass('selected');
+            $(this).closest('.movable').addClass('selected');
+            syncFontSizeUIFromSelection();
+        });
+        $(document).on('mousedown', '#canvas-wrapper .banner-text', function () {
+            $(this).closest('.movable').removeClass('selected');
+        });
+        $(document).on('mousedown', '#canvas-wrapper', function (e) {
+            if (!$(e.target).closest('.movable').length) {
+                $('.movable').removeClass('selected');
+            }
+        });
+        $(document).on('keydown', function (e) {
+            if (e.key !== 'Delete' && e.key !== 'Backspace') return;
+            const active = document.activeElement;
+            if (active) {
+                if (active.closest && active.closest('#sidebar')) return;
+                const tag = active.tagName;
+                if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA' || tag === 'BUTTON') return;
+                if (active.isContentEditable && $(active).closest('.banner-text').length) return;
+            }
+            const $sel = $('#canvas-wrapper .movable.selected');
+            if (!$sel.length) return;
+            e.preventDefault();
+            $sel.remove();
+            makeMovable();
+        });
+
+        // 3. 실시간 속성 변경
+        $('#canvas-w, #canvas-h').on('input', initCanvas);
+        $('#bg-color').on('input', function() {
+            wrapper.css('background-image', 'none');
+            wrapper.css('background-color', $(this).val());
+        });
+
+        // 4. 배경 이미지 업로드
+        $('#bg-upload').on('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                wrapper.css('background-image', `url(${event.target.result})`);
+            };
+            reader.readAsDataURL(file);
+        });
+
+        $('#bg-remove').on('click', function () {
+            wrapper.css('background-image', 'none');
+            wrapper.css('background-color', $('#bg-color').val());
+            $('#bg-upload').val('');
+        });
+
+        // 5. 텍스트 요소 동적 추가
+        function addText(str, size, weight) {
+            const newText = $(`
+                <div class="movable" style="top: 50%; left: 50%; transform: translate(-50%, -50%);">
+                    <span class="movable-handle" title="드래그하여 이동">⋮⋮</span>
+                    <div class="banner-text" contenteditable="true"
+                         style="font-size: ${size}px; font-weight: ${weight}; font-family: ${$('#font-select').val()}; color: ${$('#font-color').val()};">
+                        ${str}
+                    </div>
+                </div>
+            `);
+            wrapper.append(newText);
+            makeMovable();
+        }
+
+        // 6. 폰트 일괄 변경 (선택된 요소만 바꾸는 기능으로 확장 가능)
+        $('#font-select').on('change', function() {
+            $('.banner-text').css('font-family', $(this).val());
+        });
+
+        function getSelectedBannerText() {
+            const $sel = $('#canvas-wrapper .movable.selected .banner-text');
+            return $sel.length ? $sel : null;
+        }
+
+        function syncFontSizeUIFromSelection() {
+            const $t = getSelectedBannerText();
+            if (!$t) return;
+            const fs = parseInt(($t.css('font-size') || '0').toString(), 10);
+            if (!Number.isFinite(fs) || fs <= 0) return;
+            $('#font-size-range').val(fs);
+            $('#font-size-num').val(fs);
+        }
+
+        function applyFontSize(px) {
+            const size = Math.max(8, Math.min(180, parseInt(px, 10) || 0));
+            if (!size) return;
+            const $t = getSelectedBannerText();
+            if ($t) {
+                $t.css('font-size', size + 'px');
+            } else {
+                $('.banner-text').css('font-size', size + 'px');
+            }
+            $('#font-size-range').val(size);
+            $('#font-size-num').val(size);
+        }
+
+        $('#font-size-range').on('input', function () { applyFontSize($(this).val()); });
+        $('#font-size-num').on('input', function () { applyFontSize($(this).val()); });
+
+        // 폰트 컬러: 선택 박스가 있으면 그 박스만, 없으면 전체 적용
+        $('#font-color').on('input', function () {
+            const color = $(this).val();
+            const $sel = $('#canvas-wrapper .movable.selected .banner-text');
+            if ($sel.length) {
+                $sel.css('color', color);
+            } else {
+                $('.banner-text').css('color', color);
+            }
+        });
+
+        function centerSelectedMovable() {
+            const $sel = $('#canvas-wrapper .movable.selected');
+            if (!$sel.length) return;
+            const cw = wrapper.outerWidth();
+            const ch = wrapper.outerHeight();
+            const mw = $sel.outerWidth();
+            const mh = $sel.outerHeight();
+            const left = Math.max(0, Math.round((cw - mw) / 2));
+            const top = Math.max(0, Math.round((ch - mh) / 2));
+            $sel.css({
+                top: top + 'px',
+                left: left + 'px',
+                transform: 'none',
+                right: 'auto',
+                bottom: 'auto'
+            });
+            makeMovable();
+        }
+
+        // 7. 프리셋 (16:9 비율 두 가지)
+        function applyPreset16x9(width, height) {
+            $('#canvas-w').val(width);
+            $('#canvas-h').val(height);
+            initCanvas();
+        }
+
+        // 8. JPG 내보내기 — 고해상도 캡처 후 설정 픽셀(W×H)로 리샘플 (선명도·색 어긋남 완화)
+        function exportCanvasJPG() {
+            const canvasArea = document.getElementById('canvas-wrapper');
+            const w = parseInt($('#canvas-w').val(), 10) || 1280;
+            const h = parseInt($('#canvas-h').val(), 10) || 720;
+            $('.movable').css('border', 'none');
+            const savedZoom = viewZoom;
+            canvasScaleWrap.css('zoom', 1);
+
+            function captureScale() {
+                let s = Math.max(window.devicePixelRatio || 1, 1.5);
+                s = Math.min(s, 2.5);
+                const maxPx = 8192;
+                if (Math.max(w, h) * s > maxPx) {
+                    s = maxPx / Math.max(w, h);
+                }
+                return Math.max(1, s);
+            }
+
+            function runHtml2Canvas() {
+                return html2canvas(canvasArea, {
+                    scale: captureScale(),
+                    useCORS: true,
+                    allowTaint: true,
+                    backgroundColor: null,
+                    logging: false,
+                    imageTimeout: 15000,
+                    onclone: function (clonedDoc) {
+                        const el = clonedDoc.getElementById('canvas-wrapper');
+                        if (el) {
+                            el.style.boxShadow = 'none';
+                            el.style.outline = 'none';
+                        }
+                    },
+                });
+            }
+
+            const fontWait = document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve();
+            fontWait.then(runHtml2Canvas).then(function (srcCanvas) {
+                const out = document.createElement('canvas');
+                out.width = w;
+                out.height = h;
+                const ctx = out.getContext('2d');
+                ctx.imageSmoothingEnabled = true;
+                ctx.imageSmoothingQuality = 'high';
+                ctx.drawImage(srcCanvas, 0, 0, w, h);
+                const link = document.createElement('a');
+                link.download = `banner_${w}x${h}_${Date.now()}.jpg`;
+                link.href = out.toDataURL('image/jpeg', 0.92);
+                link.click();
+            }).catch(function () {}).finally(function () {
+                canvasScaleWrap.css('zoom', savedZoom);
+                $('.movable').css('border', '');
+            });
+        }
+
+        // 초기화 실행 (스테이지는 줌 적용 후 한 번 더 가운데 스크롤)
+        initCanvas();
+        applyViewZoom(1);
+        requestAnimationFrame(scrollStageToCenter);
+    </script>
+</body>
+</html>
